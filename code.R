@@ -130,12 +130,12 @@ glm.plot <- function(y.sum, title){
 
   agg = glm(y.sum ~ anno.agg, family = poisson)
 
-  o.r, exp(coef(agg)[2])
+  o.r = exp(coef(agg)[2])
   conf.i.2.5 = exp(confint.default(agg)[2,1])
   conf.i.97.5 = exp(confint.default(agg)[2,2])
   pval = coef(summary(agg))[2,4]
 
-  v.o = c(o.r, conf.i.2.5, conf.i.97.5, conf.i.97.5, pval)
+  v.o = c(o.r, conf.i.2.5, conf.i.97.5, pval)
   print(summary(agg))
   print(exp(confint.default(agg)))
   print(exp(coef(agg)))
@@ -146,20 +146,24 @@ glm.plot <- function(y.sum, title){
   # descrictive plot
 
 
-  dp = data.frame(Advanced = agg, 
+  dp = data.frame(Counts = y.sum, 
                   year = as.factor(anno.agg), 
                   group = group, 
                   by.weekly = as.factor(by.weekly))
 
   # color
   cc = piratepal(palette = "google")
-  g <- ggplot(dp, aes(fill=year, y=Advanced, x=by.weekly)) + 
+  g <- ggplot(dp, aes(fill=year, y=Counts, x=by.weekly)) + 
+      ggtitle(title) +
       geom_bar(position="dodge", stat="identity") +
       scale_fill_manual(values = as.vector(cc[1:2]))
 
+  print(g)
   # write graph
   title.file = paste(title, 'pdf', sep='.')
-  pdf(file=title.file)
+  pdf(file=title.file,
+      width = 15,
+      height = 10)
   print(g)
   dev.off()
 
@@ -169,10 +173,24 @@ glm.plot <- function(y.sum, title){
 
 
 
-a.sum = c(z1$A_sum, z2$A_sum)
-m.sum = c(z1$M_sum, z2$M_sum)
-e.sum = c(z1$E_sum, z2$E_sum)
-t.sum = c(z1$T_sum, z2$T_sum)
+a.sum = c(z1$A_sum, z2$A_sum) # Disease progression
+m.sum = c(z1$M_sum, z2$M_sum) # Extra nodal sites
+e.sum = c(z1$E_sum, z2$E_sum) # Metastasis
+t.sum = c(z1$T_sum, z2$T_sum) # Tumor
+
+a.glm = glm.plot(a.sum, 'Disease progression')
+m.glm = glm.plot(m.sum, 'Extra nodal sites')
+e.glm = glm.plot(e.sum, 'Metastasis')
+t.glm = glm.plot(t.sum, 'Tumor')
+
+glm.df = t(as.data.frame(a.glm))
+glm.df = rbind(glm.df, t(as.data.frame(m.glm)))
+glm.df = rbind(glm.df, t(as.data.frame(e.glm)))
+glm.df = rbind(glm.df, t(as.data.frame(t.glm)))
+colnames(glm.df) <- c('Rate', "Conf 2.5", "Conf 97.5", 'Pval')
+
+
+
 
 o.r = c()
 conf.i.2.5 = c()
