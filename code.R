@@ -7,20 +7,31 @@ library(readxl)
 library(fUnitRoots)
 library(forecast)
 library(lmtest)
-
+library(tscount)
+library(ggplot2)
+library(yarrr)
 
 setwd("~/OneDrive - Fondazione Policlinico Universitario Agostino Gemelli/gemelli/Progetti/Leccisotti/oncovipet")
 
 
 load('data_preparation.R')
 
+t1<-readxl::read_excel('Database_ONCOVIPET_complessivo_per_stats.xlsx', sheet = 1)
+t2<-readxl::read_excel('Database_ONCOVIPET_complessivo_per_stats.xlsx', sheet = 2)
+out19 = t1$`Malattia limitata (0) o avanzata (1)`
+out20 = t2$`Malattia limitata (0) o avanzata (1)`
+out = c(out19, out20)
 
 
-ts1.data <- ts(z1$A_sum, start = c(2019, 1), frequency = 2)
-ts2.data <- ts(z2$A_sum, start = c(2020, 1), frequency = 2)
+
+# time 
+ts1.data <- ts(z1$A_sum, start = c(2019, 1), frequency = 2) # deltat = 1)
+ts2.data <- ts(z2$A_sum, start = c(2020, 1), frequency = 2) # deltat = 1)
 
 plot(ts1.data)
 plot(ts2.data)
+
+
 
 # decompose components
 
@@ -105,9 +116,148 @@ urkpssTest(ts2.data, type = c("tau"), lags = c("short"),use.lag = NULL, doplot =
 tsstationary = diff(ts2.data, differences=1)
 plot(tsstationary)
 
-
-
 #################################################################
+##################          MODEL
+#################################################################
+
+# dati z1 z2
+
+
+glm.plot <- function(y.sum, title){
+  anno.agg = c(rep(2019, 11), rep(2020, 11))
+  group = c(rep(1, 11), rep(2, 11))
+  by.weekly = c(1:11, 1:11)
+
+  agg = glm(y.sum ~ anno.agg, family = poisson)
+
+  o.r, exp(coef(agg)[2])
+  conf.i.2.5 = exp(confint.default(agg)[2,1])
+  conf.i.97.5 = exp(confint.default(agg)[2,2])
+  pval = coef(summary(agg))[2,4]
+
+  v.o = c(o.r, conf.i.2.5, conf.i.97.5, conf.i.97.5, pval)
+  print(summary(agg))
+  print(exp(confint.default(agg)))
+  print(exp(coef(agg)))
+  
+  # mediamente vedo il 56% di eventi di progressione di malattia
+
+
+  # descrictive plot
+
+
+  dp = data.frame(Advanced = agg, 
+                  year = as.factor(anno.agg), 
+                  group = group, 
+                  by.weekly = as.factor(by.weekly))
+
+  # color
+  cc = piratepal(palette = "google")
+  g <- ggplot(dp, aes(fill=year, y=Advanced, x=by.weekly)) + 
+      geom_bar(position="dodge", stat="identity") +
+      scale_fill_manual(values = as.vector(cc[1:2]))
+
+  # write graph
+  title.file = paste(title, 'pdf', sep='.')
+  pdf(file=title.file)
+  print(g)
+  dev.off()
+
+  return(v.o)
+
+}
+
+
+
+a.sum = c(z1$A_sum, z2$A_sum)
+m.sum = c(z1$M_sum, z2$M_sum)
+e.sum = c(z1$E_sum, z2$E_sum)
+t.sum = c(z1$T_sum, z2$T_sum)
+
+o.r = c()
+conf.i.2.5 = c()
+conf.i.97.5 = c()
+
+o.r = c(o.r, exp(coef(agg)[2]))
+conf.i.2.5 = c(conf.i.2.5, exp(confint.default(agg)[2,1]))
+conf.i.97.5 = c(conf.i.97.5, exp(confint.default(agg)[2,2]))
+
+################
+# GLM BINOMIAL
+o.r = c()
+conf.i.2.5 = c()
+conf.i.97.5 = c()
+
+for(i in 1:11){
+  # subset by time
+  b1 = subset(x1, x1$time == i)
+  b2 = subset(x2, x2$time == i)
+
+  # vector length
+  yl1 = length(b1$advanced)
+  yl2 = length(b2$advanced)
+
+  b.agg = c(b1$advanced, b2$advanced)
+  year = c(rep(2019, yl1), rep(2020, yl2))
+
+  m.binomial = glm(b.agg ~ year, family = binomial)
+
+  print(summary(m.binomial))
+  print('Odds ratio')
+  print(exp(coef(m.binomial)))
+  o.r = c(o.r, exp(coef(m.binomial)[2]))
+  print('Conf Interval')
+  print(exp(confint.default(m.binomial)))
+  conf.i.2.5 = c(conf.i.2.5, exp(confint.default(m.binomial)[2,1]))
+  conf.i.97.5 = c(conf.i.97.5, exp(confint.default(m.binomial)[2,2]))
+}
+df = data.frame(Odd.Ratio = o.r, "Conf 2.5" = conf.i.2.5, "Conf 97.5" = conf.i.97.5)
+
+
+ggplot(df) +
+    geom_bar( aes(x=rownames(df), y=Odd.Ratio), stat="identity", fill="skyblue", alpha=0.7) +
+    geom_errorbar( aes(x=rownames(df), ymin=Conf.2.5, ymax=Conf.97.5), 
+                    width=0.4, 
+                    colour="orange", 
+                    alpha=0.9, 
+                    size=1.3)
+
+
+
+
+anno = c(rep(2019, 240), rep(2020, 371))
+
+
+m1 = glm(out ~ anno, family = binomial)
+summary(m1)
+exp(coef(m1))
+exp(confint.default(m1))
+
+lag.1 = z1$A_sum
+campyfit_pois.ts1 <- tsglm(ts1.data, 
+  # model = list(past_obs = 1, past_mean = 13), 
+  xreg = lag.1, 
+  distr = "poisson")
+
+
+lag.2 = z2$A_sum
+campyfit_pois.ts2 <- tsglm(ts2.data, 
+  # model = list(past_obs = 2, past_mean = 23), 
+  xreg = lag.2, 
+  distr = "poisson")
+
+campyfit_pois <- tsglm(campy, 
+  model = list(past_obs = 1, past_mean = 13), 
+  xreg = interventions, distr = "poisson")
+
+
+
+
+
+
+
+
+
 t1 %>%
   as_tsibble(., index=Data.PET, key=Nr.) %>%
   # filter(
