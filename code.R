@@ -125,6 +125,11 @@ glm.df = rbind(glm.df, t(as.data.frame(e.glm)))
 glm.df = rbind(glm.df, t(as.data.frame(t.glm)))
 colnames(glm.df) <- c('Rate', "Conf 2.5", "Conf 97.5", 'Pval')
 
+write.table(file='Glm_table.txt',
+  glm.df,
+  quote=F,
+  sep='\t')
+
 #######################
 # OFFSET
 
