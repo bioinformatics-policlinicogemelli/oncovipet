@@ -63,7 +63,7 @@ z2 <- data.frame(time = unique(x2$time),
 glm.plot <- function(y.sum, title){
   anno.agg = c(rep(2019, 11), rep(2020, 11))
   group = c(rep(1, 11), rep(2, 11))
-  by.weekly = c(1:11, 1:11)
+  bi.weekly = c(1:11, 1:11)
 
   agg = glm(y.sum ~ anno.agg, family = poisson)
 
@@ -82,12 +82,12 @@ glm.plot <- function(y.sum, title){
   dp = data.frame(Counts = y.sum, 
                   year = as.factor(anno.agg), 
                   group = group, 
-                  by.weekly = as.factor(by.weekly))
+                  bi.weekly = as.factor(bi.weekly))
 
   # color
   cc = piratepal(palette = "google")
   # descrictive plot
-  g <- ggplot(dp, aes(fill=year, y=Counts, x=by.weekly)) + 
+  g <- ggplot(dp, aes(fill=year, y=Counts, x=bi.weekly)) + 
       ggtitle(title) +
       geom_bar(position="dodge", stat="identity") +
       scale_fill_manual(values = as.vector(cc[1:2]))
@@ -110,6 +110,7 @@ glm.plot <- function(y.sum, title){
 a.sum = c(z1$A_sum, z2$A_sum) # Disease progression
 m.sum = c(z1$M_sum, z2$M_sum) # Extra nodal sites
 e.sum = c(z1$E_sum, z2$E_sum) # Metastasis
+N_st.sum = c(z1$Nst_sum, z2$Nst_sum) # Metastasis number
 t.sum = c(z1$T_sum, z2$T_sum) # Tumor
 n.sum = c(z1$N_sum, z2$N_sum)
 
@@ -117,6 +118,7 @@ n.sum = c(z1$N_sum, z2$N_sum)
 a.glm = glm.plot(a.sum, 'Disease progression')
 m.glm = glm.plot(m.sum, 'Extra nodal sites')
 e.glm = glm.plot(e.sum, 'Metastasis')
+N_st.glm = glm.plot(N_st.sum, 'Metastasis number')
 t.glm = glm.plot(t.sum, 'Tumor')
 n.glm = glm.plot(n.sum, 'N')
 
@@ -124,6 +126,7 @@ n.glm = glm.plot(n.sum, 'N')
 glm.df = t(as.data.frame(t.glm))
 glm.df = rbind(glm.df, t(as.data.frame(n.glm)))
 glm.df = rbind(glm.df, t(as.data.frame(m.glm)))
+glm.df = rbind(glm.df, t(as.data.frame(N_st.glm)))
 glm.df = rbind(glm.df, t(as.data.frame(e.glm)))
 glm.df = rbind(glm.df, t(as.data.frame(a.glm)))
 colnames(glm.df) <- c('Rate', "Conf 2.5", "Conf 97.5", 'Pval')
@@ -209,6 +212,7 @@ lung.z2 <- data.frame(time = unique(lung.x2$time),
 lung.a.sum = c(lung.z1$A_sum, lung.z2$A_sum) # Disease progression
 lung.m.sum = c(lung.z1$M_sum, lung.z2$M_sum) # Extra nodal sites
 lung.e.sum = c(lung.z1$E_sum, lung.z2$E_sum) # Metastasis
+lung.Nst.sum = c(lung.z1$Nst_sum, lung.z2$Nst_sum) # Metastasis number
 lung.t.sum = c(lung.z1$T_sum, lung.z2$T_sum) # Tumor
 lung.n.sum = c(lung.z1$N_sum, lung.z2$N_sum) # Tumor
 
@@ -217,6 +221,7 @@ lung.n.sum = c(lung.z1$N_sum, lung.z2$N_sum) # Tumor
 lung.a.glm = glm.plot(lung.a.sum, 'Lung Disease progression')
 lung.m.glm = glm.plot(lung.m.sum, 'Lung Metastasis')
 lung.e.glm = glm.plot(lung.e.sum, 'Lung Extra nodal sites')
+lung.Nst.glm = glm.plot(lung.Nst.sum, 'Lung Metastasis number')
 lung.t.glm = glm.plot(lung.t.sum, 'Lung Tumor')
 lung.n.glm = glm.plot(lung.n.sum, 'Lung N')
 
@@ -224,6 +229,7 @@ lung.n.glm = glm.plot(lung.n.sum, 'Lung N')
 glm.df = t(as.data.frame(lung.t.glm))
 glm.df = rbind(glm.df, t(as.data.frame(lung.n.glm)))
 glm.df = rbind(glm.df, t(as.data.frame(lung.m.glm)))
+glm.df = rbind(glm.df, t(as.data.frame(lung.Nst.glm)))
 glm.df = rbind(glm.df, t(as.data.frame(lung.e.glm)))
 glm.df = rbind(glm.df, t(as.data.frame(lung.a.glm)))
 colnames(glm.df) <- c('Rate', "Conf 2.5", "Conf 97.5", 'Pval')
@@ -281,6 +287,7 @@ Breast.z2 = Breast.z2 %>% add_row(time = 1
 # case vectors
 Breast.a.sum = c(Breast.z1$A_sum, Breast.z2$A_sum) # Disease progression
 Breast.m.sum = c(Breast.z1$M_sum, Breast.z2$M_sum) # Extra nodal sites
+Breast.Nst.sum = c(Breast.z1$Nst_sum, Breast.z2$Nst_sum) # Metastasis number
 Breast.e.sum = c(Breast.z1$E_sum, Breast.z2$E_sum) # Metastasis
 Breast.t.sum = c(Breast.z1$T_sum, Breast.z2$T_sum) # Tumor
 Breast.n.sum = c(Breast.z1$N_sum, Breast.z2$N_sum) 
@@ -288,6 +295,7 @@ Breast.n.sum = c(Breast.z1$N_sum, Breast.z2$N_sum)
 # glm model and graphs
 Breast.a.glm = glm.plot(Breast.a.sum, 'Breast Disease progression')
 Breast.m.glm = glm.plot(Breast.m.sum, 'Breast Metastasis')
+Breast.Nst.glm = glm.plot(Breast.Nst.sum, 'Breast Metastasis number')
 Breast.e.glm = glm.plot(Breast.e.sum, 'Breast Extra nodal sites')
 Breast.t.glm = glm.plot(Breast.t.sum, 'Breast Tumor')
 Breast.n.glm = glm.plot(Breast.n.sum, 'Breast N')
@@ -296,6 +304,7 @@ Breast.n.glm = glm.plot(Breast.n.sum, 'Breast N')
 glm.df = t(as.data.frame(Breast.t.glm))
 glm.df = rbind(glm.df, t(as.data.frame(Breast.n.glm)))
 glm.df = rbind(glm.df, t(as.data.frame(Breast.m.glm)))
+glm.df = rbind(glm.df, t(as.data.frame(Breast.Nst.glm)))
 glm.df = rbind(glm.df, t(as.data.frame(Breast.e.glm)))
 glm.df = rbind(glm.df, t(as.data.frame(Breast.a.glm)))
 colnames(glm.df) <- c('Rate', "Conf 2.5", "Conf 97.5", 'Pval')
@@ -336,6 +345,7 @@ Gynae.z2 <- data.frame(time = unique(Gynae.x2$time),
 # case vectors
 Gynae.a.sum = c(Gynae.z1$A_sum, Gynae.z2$A_sum) # Disease progression
 Gynae.m.sum = c(Gynae.z1$M_sum, Gynae.z2$M_sum) # Extra nodal sites
+Gynae.Nst.sum = c(Gynae.z1$Nst_sum, Gynae.z2$Nst_sum) # Metastasis number
 Gynae.e.sum = c(Gynae.z1$E_sum, Gynae.z2$E_sum) # Metastasis
 Gynae.t.sum = c(Gynae.z1$T_sum, Gynae.z2$T_sum) # Tumor
 Gynae.n.sum = c(Gynae.z1$N_sum, Gynae.z2$N_sum) 
@@ -343,6 +353,7 @@ Gynae.n.sum = c(Gynae.z1$N_sum, Gynae.z2$N_sum)
 # glm model and graphs
 Gynae.a.glm = glm.plot(Gynae.a.sum, 'Gynae Disease progression')
 Gynae.m.glm = glm.plot(Gynae.m.sum, 'Gynae Metastasis')
+Gynae.Nst.glm = glm.plot(Gynae.Nst.sum, 'Gynae Metastasis number')
 Gynae.e.glm = glm.plot(Gynae.e.sum, 'Gynae Extra nodal sites')
 Gynae.t.glm = glm.plot(Gynae.t.sum, 'Gynae Tumor')
 Gynae.n.glm = glm.plot(Gynae.n.sum, 'Gynae N')
@@ -351,6 +362,7 @@ Gynae.n.glm = glm.plot(Gynae.n.sum, 'Gynae N')
 glm.df = t(as.data.frame(Gynae.t.glm))
 glm.df = rbind(glm.df, t(as.data.frame(Gynae.n.glm)))
 glm.df = rbind(glm.df, t(as.data.frame(Gynae.m.glm)))
+glm.df = rbind(glm.df, t(as.data.frame(Gynae.Nst.glm)))
 glm.df = rbind(glm.df, t(as.data.frame(Gynae.e.glm)))
 glm.df = rbind(glm.df, t(as.data.frame(Gynae.a.glm)))
 colnames(glm.df) <- c('Rate', "Conf 2.5", "Conf 97.5", 'Pval')
@@ -414,6 +426,7 @@ Lympho.z2 <- data.frame(time = unique(Lympho.x2$time),
 # case vectors
 Lympho.a.sum = c(Lympho.z1$A_sum, Lympho.z2$A_sum) # Disease progression
 Lympho.m.sum = c(Lympho.z1$M_sum, Lympho.z2$M_sum) # Extra nodal sites
+Lympho.Nst.sum = c(Lympho.z1$Nst_sum, Lympho.z2$Nst_sum) # Metastasis number
 Lympho.e.sum = c(Lympho.z1$E_sum, Lympho.z2$E_sum) # Metastasis
 Lympho.t.sum = c(Lympho.z1$T_sum, Lympho.z2$T_sum) # Tumor
 Lympho.n.sum = c(Lympho.z1$N_sum, Lympho.z2$N_sum) 
@@ -421,6 +434,7 @@ Lympho.n.sum = c(Lympho.z1$N_sum, Lympho.z2$N_sum)
 # glm model and graphs
 Lympho.a.glm = glm.plot(Lympho.a.sum, 'Lympho Disease progression')
 Lympho.m.glm = glm.plot(Lympho.m.sum, 'Lympho Metastasis')
+Lympho.Nst.glm = glm.plot(Lympho.Nst.sum, 'Lympho Metastasis number')
 Lympho.e.glm = glm.plot(Lympho.e.sum, 'Lympho Extra nodal sites')
 Lympho.t.glm = glm.plot(Lympho.t.sum, 'Lympho Tumor')
 Lympho.n.glm = glm.plot(Lympho.n.sum, 'Lympho N')
@@ -429,6 +443,7 @@ Lympho.n.glm = glm.plot(Lympho.n.sum, 'Lympho N')
 glm.df = t(as.data.frame(Lympho.t.glm))
 glm.df = rbind(glm.df, t(as.data.frame(Lympho.n.glm)))
 glm.df = rbind(glm.df, t(as.data.frame(Lympho.m.glm)))
+glm.df = rbind(glm.df, t(as.data.frame(Lympho.Nst.glm)))
 glm.df = rbind(glm.df, t(as.data.frame(Lympho.e.glm)))
 glm.df = rbind(glm.df, t(as.data.frame(Lympho.a.glm)))
 colnames(glm.df) <- c('Rate', "Conf 2.5", "Conf 97.5", 'Pval')
@@ -497,6 +512,7 @@ Gastro.z2 <- data.frame(time = unique(Gastro.x2$time),
 # case vectors
 Gastro.a.sum = c(Gastro.z1$A_sum, Gastro.z2$A_sum) # Disease progression
 Gastro.m.sum = c(Gastro.z1$M_sum, Gastro.z2$M_sum) # Extra nodal sites
+Gastro.Nst.sum = c(Gastro.z1$Nst_sum, Gastro.z2$Nst_sum) # Metastasis number
 Gastro.e.sum = c(Gastro.z1$E_sum, Gastro.z2$E_sum) # Metastasis
 Gastro.t.sum = c(Gastro.z1$T_sum, Gastro.z2$T_sum) # Tumor
 Gastro.n.sum = c(Gastro.z1$N_sum, Gastro.z2$N_sum) 
@@ -504,6 +520,7 @@ Gastro.n.sum = c(Gastro.z1$N_sum, Gastro.z2$N_sum)
 # glm model and graphs
 Gastro.a.glm = glm.plot(Gastro.a.sum, 'Gastro Disease progression')
 Gastro.m.glm = glm.plot(Gastro.m.sum, 'Gastro Metastasis')
+Gastro.Nst.glm = glm.plot(Gastro.Nst.sum, 'Gastro Metastasis number')
 Gastro.e.glm = glm.plot(Gastro.e.sum, 'Gastro Extra nodal sites')
 Gastro.t.glm = glm.plot(Gastro.t.sum, 'Gastro Tumor')
 Gastro.n.glm = glm.plot(Gastro.n.sum, 'Gastro N')
@@ -512,6 +529,7 @@ Gastro.n.glm = glm.plot(Gastro.n.sum, 'Gastro N')
 glm.df = t(as.data.frame(Gastro.t.glm))
 glm.df = rbind(glm.df, t(as.data.frame(Gastro.n.glm)))
 glm.df = rbind(glm.df, t(as.data.frame(Gastro.m.glm)))
+glm.df = rbind(glm.df, t(as.data.frame(Gastro.Nst.glm)))
 glm.df = rbind(glm.df, t(as.data.frame(Gastro.e.glm)))
 glm.df = rbind(glm.df, t(as.data.frame(Gastro.a.glm)))
 colnames(glm.df) <- c('Rate', "Conf 2.5", "Conf 97.5", 'Pval')
