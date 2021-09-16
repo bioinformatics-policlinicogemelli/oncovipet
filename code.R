@@ -1,6 +1,8 @@
 library(dplyr)
 library(ggplot2)
 library(yarrr)
+library(pscl)
+library(brglm)
 
 setwd("~/OneDrive - Fondazione Policlinico Universitario Agostino Gemelli/gemelli/Progetti/Leccisotti/oncovipet")
 
@@ -60,12 +62,14 @@ z2 <- data.frame(time = unique(x2$time),
 #             5. print Pval
 #             6. pull all prints in a returden vector
 #             7. print pdf file with stacked barplot 2019-2020 of counts by weekly
-glm.plot <- function(y.sum, title){
+glm.plot <- function(y.sum, title, test){
   anno.agg = c(rep(2019, 11), rep(2020, 11))
   group = c(rep(1, 11), rep(2, 11))
   bi.weekly = c(1:11, 1:11)
 
-  agg = glm(y.sum ~ anno.agg, family = poisson)
+  if(test == 'glm'){
+    agg = glm(y.sum ~ anno.agg, family = poisson)
+  } else {agg = brglm(y.sum ~ anno.agg)}
 
   o.r = exp(coef(agg)[2])
   conf.i.2.5 = exp(confint.default(agg)[2,1])
@@ -89,6 +93,7 @@ glm.plot <- function(y.sum, title){
   # descrictive plot
   g <- ggplot(dp, aes(fill=year, y=Counts, x=bi.weekly)) + 
       ggtitle(title) +
+      ylab('Absolute frequency') +
       geom_bar(position="dodge", stat="identity") +
       scale_fill_manual(values = as.vector(cc[1:2]))
 
@@ -538,3 +543,91 @@ write.table(file='Glm_table_gastro.txt',
   glm.df,
   quote=F,
   sep='\t')
+
+
+# Melanoma
+
+Melanoma.x1 = subset(x1, x1$site == "Melanoma")
+Melanoma.x2 = subset(x2, x2$site == "Melanoma")
+
+
+# Aggregation over 2 weeks time points (2019)
+Melanoma.z1 <- data.frame(time = unique(Melanoma.x1$time),
+                 T_sum = aggregate(Melanoma.x1$T, list(Melanoma.x1$time), sum)$x,
+                 N_sum = aggregate(Melanoma.x1$N, list(Melanoma.x1$time), sum)$x,
+                 M_sum = aggregate(Melanoma.x1$M, list(Melanoma.x1$time), sum)$x,
+                 Nst_sum = aggregate(Melanoma.x1$Nst, list(Melanoma.x1$time), sum)$x,
+                 E_sum = aggregate(Melanoma.x1$extranodal, list(Melanoma.x1$time), sum)$x,
+                 A_sum = aggregate(Melanoma.x1$advanced, list(Melanoma.x1$time), sum)$x)
+
+Melanoma.z1 = Melanoma.z1 %>% add_row(time = 1
+, T_sum = 0
+, N_sum = 0
+, M_sum = 0
+, Nst_sum = 0
+, E_sum = 0
+, A_sum = 0 
+, .before = 1)
+# aggiunte righe alla fine da time 4 a time 11
+Melanoma.z1 = Melanoma.z1 %>% add_row(time = 11
+, T_sum = 0
+, N_sum = 0
+, M_sum = 0
+, Nst_sum = 0
+, E_sum = 0
+, A_sum = 0)
+
+
+# Aggregation over 2 weeks time points (2020)
+Melanoma.z2 <- data.frame(time = unique(Melanoma.x2$time),
+                 T_sum = aggregate(Melanoma.x2$T, list(Melanoma.x2$time), sum)$x,
+                 N_sum = aggregate(Melanoma.x2$N, list(Melanoma.x2$time), sum)$x,
+                 M_sum = aggregate(Melanoma.x2$M, list(Melanoma.x2$time), sum)$x,
+                 Nst_sum = aggregate(Melanoma.x2$Nst, list(Melanoma.x2$time), sum)$x,
+                 E_sum = aggregate(Melanoma.x2$extranodal, list(Melanoma.x2$time), sum)$x,
+                 A_sum = aggregate(Melanoma.x2$advanced, list(Melanoma.x2$time), sum)$x)
+
+Melanoma.z2 = Melanoma.z2 %>% add_row(time = 7
+, T_sum = 0
+, N_sum = 0
+, M_sum = 0
+, Nst_sum = 0
+, E_sum = 0
+, A_sum = 0 
+, .before = 7)
+
+# Melanoma model
+
+# case vectors
+Melanoma.a.sum = c(Melanoma.z1$A_sum, Melanoma.z2$A_sum) # Disease progression
+Melanoma.m.sum = c(Melanoma.z1$M_sum, Melanoma.z2$M_sum) # Extra nodal sites
+Melanoma.Nst.sum = c(Melanoma.z1$Nst_sum, Melanoma.z2$Nst_sum) # Metastasis number
+Melanoma.e.sum = c(Melanoma.z1$E_sum, Melanoma.z2$E_sum) # Metastasis
+Melanoma.t.sum = c(Melanoma.z1$T_sum, Melanoma.z2$T_sum) # Tumor
+Melanoma.n.sum = c(Melanoma.z1$N_sum, Melanoma.z2$N_sum) 
+
+# glm model and graphs
+Melanoma.a.glm = glm.plot(Melanoma.a.sum, 'Melanoma Disease progression', 'brglm')
+Melanoma.m.glm = glm.plot(Melanoma.m.sum, 'Melanoma Metastasis')
+Melanoma.Nst.glm = glm.plot(Melanoma.Nst.sum, 'Melanoma Metastasis number')
+Melanoma.e.glm = glm.plot(Melanoma.e.sum, 'Melanoma Extra nodal sites')
+Melanoma.t.glm = glm.plot(Melanoma.t.sum, 'Melanoma Tumor')
+Melanoma.n.glm = glm.plot(Melanoma.n.sum, 'Melanoma N')
+
+# output table of Ratio, Conf interval, Pval
+glm.df = t(as.data.frame(Melanoma.t.glm))
+glm.df = rbind(glm.df, t(as.data.frame(Melanoma.n.glm)))
+glm.df = rbind(glm.df, t(as.data.frame(Melanoma.m.glm)))
+glm.df = rbind(glm.df, t(as.data.frame(Melanoma.Nst.glm)))
+glm.df = rbind(glm.df, t(as.data.frame(Melanoma.e.glm)))
+glm.df = rbind(glm.df, t(as.data.frame(Melanoma.a.glm)))
+colnames(glm.df) <- c('Rate', "Conf 2.5", "Conf 97.5", 'Pval')
+
+write.table(file='Glm_table_Melanoma.txt',
+  glm.df,
+  quote=F,
+  sep='\t')
+
+agg.N_st = zeroinfl(Melanoma.Nst.sum ~ anno.agg,  dist = "poisson")
+# agg = glm(Melanoma.a.sum ~ anno.agg,  family = "binomial")
+agg = brglm(Melanoma.a.sum ~ anno.agg)
