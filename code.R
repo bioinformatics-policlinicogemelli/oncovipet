@@ -165,7 +165,7 @@ group = group,
 by.weekly = by.weekly)
 
 # Glm model with offset
-mpoisRR<-glm(df.offset$t.sum~offset(log(df.offset$den))+df.offset$year,family=poisson(link="log"))
+mpoisRR<-glm(df.offset$a.sum~offset(log(df.offset$t.sum))+df.offset$year,family=poisson(link="log"))
 summary(mpoisRR)
 
 exp(coef(mpoisRR))  # relative hazard (RR) 
@@ -608,11 +608,13 @@ Melanoma.n.sum = c(Melanoma.z1$N_sum, Melanoma.z2$N_sum)
 
 # glm model and graphs
 Melanoma.a.glm = glm.plot(Melanoma.a.sum, 'Melanoma Disease progression', 'brglm')
-Melanoma.m.glm = glm.plot(Melanoma.m.sum, 'Melanoma Metastasis')
-Melanoma.Nst.glm = glm.plot(Melanoma.Nst.sum, 'Melanoma Metastasis number')
-Melanoma.e.glm = glm.plot(Melanoma.e.sum, 'Melanoma Extra nodal sites')
-Melanoma.t.glm = glm.plot(Melanoma.t.sum, 'Melanoma Tumor')
-Melanoma.n.glm = glm.plot(Melanoma.n.sum, 'Melanoma N')
+Melanoma.m.glm = glm.plot(Melanoma.m.sum, 'Melanoma Metastasis', 'brglm')
+Melanoma.Nst.sum = ifelse(Melanoma.Nst.sum == 0, 0, 1)
+Melanoma.Nst.glm = glm.plot(Melanoma.Nst.sum, 'Melanoma Metastasis number', 'brglm')
+Melanoma.e.sum = ifelse(Melanoma.e.sum == 0, 0, 1)
+Melanoma.e.glm = glm.plot(Melanoma.e.sum, 'Melanoma Extra nodal sites', 'brglm')
+Melanoma.t.glm = glm.plot(Melanoma.t.sum, 'Melanoma Tumor', 'brglm')
+Melanoma.n.glm = glm.plot(Melanoma.n.sum, 'Melanoma N', 'brglm')
 
 # output table of Ratio, Conf interval, Pval
 glm.df = t(as.data.frame(Melanoma.t.glm))
@@ -628,6 +630,195 @@ write.table(file='Glm_table_Melanoma.txt',
   quote=F,
   sep='\t')
 
-agg.N_st = zeroinfl(Melanoma.Nst.sum ~ anno.agg,  dist = "poisson")
-# agg = glm(Melanoma.a.sum ~ anno.agg,  family = "binomial")
-agg = brglm(Melanoma.a.sum ~ anno.agg)
+
+
+
+# Myeloma
+
+Myeloma.x1 = subset(x1, x1$site == "Mieloma")
+Myeloma.x2 = subset(x2, x2$site == "Mieloma")
+
+
+# Aggregation over 2 weeks time points (2019)
+Myeloma.z1 <- data.frame(time = unique(Myeloma.x1$time),
+                 T_sum = aggregate(Myeloma.x1$T, list(Myeloma.x1$time), sum)$x,
+                 N_sum = aggregate(Myeloma.x1$N, list(Myeloma.x1$time), sum)$x,
+                 M_sum = aggregate(Myeloma.x1$M, list(Myeloma.x1$time), sum)$x,
+                 Nst_sum = aggregate(Myeloma.x1$Nst, list(Myeloma.x1$time), sum)$x,
+                 E_sum = aggregate(Myeloma.x1$extranodal, list(Myeloma.x1$time), sum)$x,
+                 A_sum = aggregate(Myeloma.x1$advanced, list(Myeloma.x1$time), sum)$x)
+
+Myeloma.z1 = Myeloma.z1 %>% add_row(time = 3
+, T_sum = 0
+, N_sum = 0
+, M_sum = 0
+, Nst_sum = 0
+, E_sum = 0
+, A_sum = 0 
+, .before = 3)
+# aggiunte righe alla fine da time 4 a time 11
+Myeloma.z1 = Myeloma.z1 %>% add_row(time = 11
+, T_sum = 0
+, N_sum = 0
+, M_sum = 0
+, Nst_sum = 0
+, E_sum = 0
+, A_sum = 0)
+
+
+# Aggregation over 2 weeks time points (2020)
+Myeloma.z2 <- data.frame(time = unique(Myeloma.x2$time),
+                 T_sum = aggregate(Myeloma.x2$T, list(Myeloma.x2$time), sum)$x,
+                 N_sum = aggregate(Myeloma.x2$N, list(Myeloma.x2$time), sum)$x,
+                 M_sum = aggregate(Myeloma.x2$M, list(Myeloma.x2$time), sum)$x,
+                 Nst_sum = aggregate(Myeloma.x2$Nst, list(Myeloma.x2$time), sum)$x,
+                 E_sum = aggregate(Myeloma.x2$extranodal, list(Myeloma.x2$time), sum)$x,
+                 A_sum = aggregate(Myeloma.x2$advanced, list(Myeloma.x2$time), sum)$x)
+
+Myeloma.z2 = Myeloma.z2 %>% add_row(time = 4
+, T_sum = 0
+, N_sum = 0
+, M_sum = 0
+, Nst_sum = 0
+, E_sum = 0
+, A_sum = 0 
+, .before = 4)
+
+# Myeloma model
+
+# case vectors
+Myeloma.a.sum = c(Myeloma.z1$A_sum, Myeloma.z2$A_sum) # Disease progression
+Myeloma.m.sum = c(Myeloma.z1$M_sum, Myeloma.z2$M_sum) # Extra nodal sites
+Myeloma.Nst.sum = c(Myeloma.z1$Nst_sum, Myeloma.z2$Nst_sum) # Metastasis number
+Myeloma.e.sum = c(Myeloma.z1$E_sum, Myeloma.z2$E_sum) # Metastasis
+Myeloma.t.sum = c(Myeloma.z1$T_sum, Myeloma.z2$T_sum) # Tumor
+Myeloma.n.sum = c(Myeloma.z1$N_sum, Myeloma.z2$N_sum) 
+
+# glm model and graphs
+Myeloma.a.sum = ifelse(Myeloma.a.sum == 0, 0, 1)
+Myeloma.a.glm = glm.plot(Myeloma.a.sum, 'Myeloma Disease progression', 'brglm')
+Myeloma.m.sum = ifelse(Myeloma.m.sum == 0, 0, 1)
+Myeloma.m.glm = glm.plot(Myeloma.m.sum, 'Myeloma Metastasis', 'brglm')
+Myeloma.Nst.glm = glm.plot(Myeloma.Nst.sum, 'Myeloma Metastasis number', 'brglm')
+Myeloma.e.sum = ifelse(Myeloma.e.sum == 0, 0, 1)
+Myeloma.e.glm = glm.plot(Myeloma.e.sum, 'Myeloma Extra nodal sites', 'brglm')
+Myeloma.t.glm = glm.plot(Myeloma.t.sum, 'Myeloma Tumor', 'brglm')
+Myeloma.n.glm = glm.plot(Myeloma.n.sum, 'Myeloma N', 'brglm')
+
+# output table of Ratio, Conf interval, Pval
+glm.df = t(as.data.frame(Myeloma.t.glm))
+glm.df = rbind(glm.df, t(as.data.frame(Myeloma.n.glm)))
+glm.df = rbind(glm.df, t(as.data.frame(Myeloma.m.glm)))
+glm.df = rbind(glm.df, t(as.data.frame(Myeloma.Nst.glm)))
+glm.df = rbind(glm.df, t(as.data.frame(Myeloma.e.glm)))
+glm.df = rbind(glm.df, t(as.data.frame(Myeloma.a.glm)))
+colnames(glm.df) <- c('Rate', "Conf 2.5", "Conf 97.5", 'Pval')
+
+write.table(file='Glm_table_Myeloma.txt',
+  glm.df,
+  quote=F,
+  sep='\t')
+
+
+
+
+# Head_Neck
+
+Head_Neck.x1 = subset(x1, x1$site == "Cavo orale"
+  | x1$site == "Mascellare"
+  | x1$site == "Laringe"
+  | x1$site == "Esofago"
+  | x1$site == "Tonsilla"
+  | x1$site == "Ipofaringe"
+  | x1$site == "Parotide"
+  | x1$site == "Mandibola"
+  | x1$site == "Orbita oculare"
+  | x1$site == "Cute del collo"
+  | x1$site == "Orofaringe")
+Head_Neck.x2 = subset(x2, x2$site == "Esofago"
+  | x2$site == "Laringe"
+  | x2$site == "Orofaringe"
+  | x2$site == "Lat. cerv."
+  | x2$site == "Rinofaringe"
+  | x2$site == "Ipofaringe"
+  | x2$site == "Naso"
+  | x2$site == "Orbita oculare"
+  | x2$site == "Cavo orale"
+  | x2$site == "Cute del collo")
+
+
+# Aggregation over 2 weeks time points (2019)
+Head_Neck.z1 <- data.frame(time = unique(Head_Neck.x1$time),
+                 T_sum = aggregate(Head_Neck.x1$T, list(Head_Neck.x1$time), sum)$x,
+                 N_sum = aggregate(Head_Neck.x1$N, list(Head_Neck.x1$time), sum)$x,
+                 M_sum = aggregate(Head_Neck.x1$M, list(Head_Neck.x1$time), sum)$x,
+                 Nst_sum = aggregate(Head_Neck.x1$Nst, list(Head_Neck.x1$time), sum)$x,
+                 E_sum = aggregate(Head_Neck.x1$extranodal, list(Head_Neck.x1$time), sum)$x,
+                 A_sum = aggregate(Head_Neck.x1$advanced, list(Head_Neck.x1$time), sum)$x)
+
+Head_Neck.z1 = Head_Neck.z1 %>% add_row(time = 8
+, T_sum = 0
+, N_sum = 0
+, M_sum = 0
+, Nst_sum = 0
+, E_sum = 0
+, A_sum = 0 
+, .before = 8)
+
+
+# Aggregation over 2 weeks time points (2020)
+Head_Neck.z2 <- data.frame(time = unique(Head_Neck.x2$time),
+                 T_sum = aggregate(Head_Neck.x2$T, list(Head_Neck.x2$time), sum)$x,
+                 N_sum = aggregate(Head_Neck.x2$N, list(Head_Neck.x2$time), sum)$x,
+                 M_sum = aggregate(Head_Neck.x2$M, list(Head_Neck.x2$time), sum)$x,
+                 Nst_sum = aggregate(Head_Neck.x2$Nst, list(Head_Neck.x2$time), sum)$x,
+                 E_sum = aggregate(Head_Neck.x2$extranodal, list(Head_Neck.x2$time), sum)$x,
+                 A_sum = aggregate(Head_Neck.x2$advanced, list(Head_Neck.x2$time), sum)$x)
+
+Head_Neck.z2 = Head_Neck.z2 %>% add_row(time = 7
+, T_sum = 0
+, N_sum = 0
+, M_sum = 0
+, Nst_sum = 0
+, E_sum = 0
+, A_sum = 0 
+, .before = 7)
+
+# Head_Neck model
+
+# case vectors
+Head_Neck.a.sum = c(Head_Neck.z1$A_sum, Head_Neck.z2$A_sum) # Disease progression
+Head_Neck.m.sum = c(Head_Neck.z1$M_sum, Head_Neck.z2$M_sum) # Extra nodal sites
+Head_Neck.Nst.sum = c(Head_Neck.z1$Nst_sum, Head_Neck.z2$Nst_sum) # Metastasis number
+Head_Neck.e.sum = c(Head_Neck.z1$E_sum, Head_Neck.z2$E_sum) # Metastasis
+Head_Neck.t.sum = c(Head_Neck.z1$T_sum, Head_Neck.z2$T_sum) # Tumor
+Head_Neck.n.sum = c(Head_Neck.z1$N_sum, Head_Neck.z2$N_sum) 
+
+# glm model and graphs
+Head_Neck.a.sum = ifelse(Head_Neck.a.sum == 0, 0, 1)
+Head_Neck.a.glm = glm.plot(Head_Neck.a.sum, 'Head_Neck Disease progression', 'brglm')
+Head_Neck.m.sum = ifelse(Head_Neck.m.sum == 0, 0, 1)
+Head_Neck.m.glm = glm.plot(Head_Neck.m.sum, 'Head_Neck Metastasis', 'brglm')
+Head_Neck.Nst.sum = ifelse(Head_Neck.Nst.sum == 0, 0, 1)
+Head_Neck.Nst.glm = glm.plot(Head_Neck.Nst.sum, 'Head_Neck Metastasis number', 'brglm')
+Head_Neck.e.sum = ifelse(Head_Neck.e.sum == 0, 0, 1)
+Head_Neck.e.glm = glm.plot(Head_Neck.e.sum, 'Head_Neck Extra nodal sites', 'brglm')
+Head_Neck.t.sum = ifelse(Head_Neck.t.sum == 0, 0, 1)
+Head_Neck.t.glm = glm.plot(Head_Neck.t.sum, 'Head_Neck Tumor', 'brglm')
+Head_Neck.n.sum = ifelse(Head_Neck.n.sum == 0, 0, 1)
+Head_Neck.n.glm = glm.plot(Head_Neck.n.sum, 'Head_Neck N', 'brglm')
+
+# output table of Ratio, Conf interval, Pval
+glm.df = t(as.data.frame(Head_Neck.t.glm))
+glm.df = rbind(glm.df, t(as.data.frame(Head_Neck.n.glm)))
+glm.df = rbind(glm.df, t(as.data.frame(Head_Neck.m.glm)))
+glm.df = rbind(glm.df, t(as.data.frame(Head_Neck.Nst.glm)))
+glm.df = rbind(glm.df, t(as.data.frame(Head_Neck.e.glm)))
+glm.df = rbind(glm.df, t(as.data.frame(Head_Neck.a.glm)))
+colnames(glm.df) <- c('Rate', "Conf 2.5", "Conf 97.5", 'Pval')
+
+write.table(file='Glm_table_Head_Neck.txt',
+  glm.df,
+  quote=F,
+  sep='\t')
+
